@@ -30,6 +30,7 @@ import org.jellyfin.mobile.setup.ConnectFragment
 import org.jellyfin.mobile.utils.AndroidVersion
 import org.jellyfin.mobile.utils.BackPressInterceptor
 import org.jellyfin.mobile.utils.BluetoothPermissionHelper
+import org.jellyfin.mobile.utils.ItemDeepLink
 import org.jellyfin.mobile.utils.Constants
 import org.jellyfin.mobile.utils.PermissionRequestHelper
 import org.jellyfin.mobile.utils.SmartOrientationListener
@@ -48,6 +49,28 @@ class MainActivity : AppCompatActivity() {
     val bluetoothPermissionHelper: BluetoothPermissionHelper = BluetoothPermissionHelper(this, get())
     val chromecast: IChromecast = Chromecast()
     private val permissionRequestHelper: PermissionRequestHelper by inject()
+
+    private var pendingItemId: String? = null
+
+    private fun acceptDeepLink(intent: Intent?) {
+        val itemId = ItemDeepLink.parse(intent?.data) ?: return
+        pendingItemId = itemId
+        deliverDeepLink()
+    }
+
+    private fun deliverDeepLink() {
+        val itemId = pendingItemId ?: return
+        val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+        if (fragment is WebViewFragment && fragment.openItem(itemId)) {
+            pendingItemId = null
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        acceptDeepLink(intent)
+    }
 
     var serviceBinder: RemotePlayerService.ServiceBinder? = null
         private set
@@ -103,6 +126,7 @@ class MainActivity : AppCompatActivity() {
         )
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        acceptDeepLink(intent)
 
         // Check WebView support
         if (!isWebViewSupported()) {
@@ -135,6 +159,7 @@ class MainActivity : AppCompatActivity() {
             mainViewModel.serverState.collectLatest { state ->
                 lifecycle.withStarted {
                     handleServerState(state)
+                    deliverDeepLink()
                 }
             }
         }
