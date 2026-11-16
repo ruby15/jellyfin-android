@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
         deliverDeepLink()
     }
 
-    private fun deliverDeepLink() {
+    fun deliverDeepLink() {
         val itemId = pendingItemId ?: return
         val fragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
         if (fragment is WebViewFragment && fragment.openItem(itemId)) {
