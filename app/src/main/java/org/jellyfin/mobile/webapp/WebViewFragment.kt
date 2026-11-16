@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import androidx.webkit.WebViewCompat
 import kotlinx.coroutines.launch
+import org.jellyfin.mobile.MainActivity
 import org.jellyfin.mobile.MainViewModel
 import org.jellyfin.mobile.R
 import org.jellyfin.mobile.app.AppPreferences
@@ -118,8 +119,9 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
                 webView.removeCallbacks(timeoutRunnable)
                 webView.removeCallbacks(showLoadingContainerRunnable)
                 connected = true
-                navigateToPendingItem()
                 runOnUiThread {
+                    (activity as? MainActivity)?.deliverDeepLink()
+                    navigateToPendingItem()
                     webViewBinding.loadingContainer.isVisible = false
                     webView.fadeIn()
                 }
