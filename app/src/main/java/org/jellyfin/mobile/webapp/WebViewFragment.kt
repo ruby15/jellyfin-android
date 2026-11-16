@@ -62,6 +62,25 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
     lateinit var server: ServerEntity
         private set
     private var connected = false
+    private var pendingItemId: String? = null
+
+    fun openItem(itemId: String): Boolean {
+        pendingItemId = itemId
+        navigateToPendingItem()
+        return true
+    }
+
+    private fun navigateToPendingItem() {
+        val id = pendingItemId ?: return
+        if (!connected) return
+        val webView = webViewBinding?.webView ?: return
+        pendingItemId = null
+        // Route through Jellyfin Web rather than constructing a URL relative to the server root.
+        webView.evaluateJavascript(
+            "window.location.hash = '#/details?id=$id';",
+            null,
+        )
+    }
     private val timeoutRunnable = Runnable {
         handleError()
     }
@@ -99,6 +118,7 @@ class WebViewFragment : Fragment(), BackPressInterceptor, JellyfinWebChromeClien
                 webView.removeCallbacks(timeoutRunnable)
                 webView.removeCallbacks(showLoadingContainerRunnable)
                 connected = true
+                navigateToPendingItem()
                 runOnUiThread {
                     webViewBinding.loadingContainer.isVisible = false
                     webView.fadeIn()
