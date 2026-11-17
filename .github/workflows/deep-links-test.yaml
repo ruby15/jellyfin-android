@@ -39,9 +39,4 @@ jobs:
           test -n "$apk"
           cp "$apk" jellyfin-deep-links-debug.apk
           tag="deep-links-debug-${{ github.run_number }}-${{ github.run_attempt }}"
-          gh release create "$tag" jellyfin-deep-links-debug.apk \\
-            --repo "${{ github.repository }}" \\
-            --target "${{ github.sha }}" \\
-            --title "Jellyfin Deep Links debug build $tag" \\
-            --notes "Private-use test build with deep links and landscape playback. Debug APK; not an official Jellyfin release." \\
-            --prerelease
+          gh release create "$tag" jellyfin-deep-links-debug.apk --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "Jellyfin Deep Links debug build $tag" --notes "Private-use test build with deep links and landscape playback. Debug APK; not an official Jellyfin release." --prerelease
