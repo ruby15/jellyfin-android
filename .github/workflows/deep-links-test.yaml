@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test-and-build:
@@ -30,5 +30,18 @@ jobs:
           path: app/build/outputs/apk/libre/debug/*.apk
           retention-days: 14
           if-no-files-found: error
-
-# Build includes landscape-on-playback behavior.
+      - name: Publish APK as a direct download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          apk=$(find app/build/outputs/apk/libre/debug -maxdepth 1 -name '*.apk' -print -quit)
+          test -n "$apk"
+          cp "$apk" jellyfin-deep-links-debug.apk
+          tag="deep-links-debug-${{ github.run_number }}-${{ github.run_attempt }}"
+          gh release create "$tag" jellyfin-deep-links-debug.apk \\
+            --repo "${{ github.repository }}" \\
+            --target "${{ github.sha }}" \\
+            --title "Jellyfin Deep Links debug build $tag" \\
+            --notes "Private-use test build with deep links and landscape playback. Debug APK; not an official Jellyfin release." \\
+            --prerelease
