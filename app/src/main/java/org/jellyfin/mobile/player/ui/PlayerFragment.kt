@@ -120,13 +120,10 @@ class PlayerFragment : Fragment(), BackPressInterceptor {
             requireContext().toast(safeMessage)
         }
         viewModel.queueManager.currentMediaSource.observe(this) { mediaSource ->
-            if (mediaSource.selectedVideoStream?.isLandscape == false) {
-                // For portrait videos, immediately enable fullscreen
-                playerFullscreenHelper.enableFullscreen()
-            } else if (appPreferences.exoPlayerStartLandscapeVideoInLandscape) {
-                // Auto-switch to landscape for landscape videos if enabled
-                requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            }
+            // Always open the integrated video player in landscape, independently
+            // of the device auto-rotate setting and the web player preference.
+            // PlayerFragment.onDestroy() restores the normal app orientation.
+            requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
             // Update title and player menus
             toolbar.title = mediaSource.getName(requireContext())
