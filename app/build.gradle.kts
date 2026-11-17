@@ -72,6 +72,18 @@ android {
         getByName("debug") {
             applicationIdSuffix = ".debug"
             isDebuggable = true
+            // Dedicated signing identity for personal CI builds. Never commit the key.
+            val privateKeystore = System.getenv("JELLYFIN_PRIVATE_KEYSTORE")
+            val privatePassword = System.getenv("JELLYFIN_PRIVATE_KEYSTORE_PASSWORD")
+            if (!privateKeystore.isNullOrBlank() && !privatePassword.isNullOrBlank()) {
+                val privateSigning = signingConfigs.create("privateDebug") {
+                    storeFile = file(privateKeystore)
+                    storePassword = privatePassword
+                    keyAlias = "jellyfin-private"
+                    keyPassword = privatePassword
+                }
+                signingConfig = privateSigning
+            }
         }
     }
 
