@@ -21,6 +21,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - name: Unit tests
         run: ./gradlew test
+      - name: Restore persistent signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.JELLYFIN_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.JELLYFIN_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$KEYSTORE_BASE64" || -z "$KEYSTORE_PASSWORD" ]]; then
+            echo "::error::Configure JELLYFIN_KEYSTORE_BASE64 and JELLYFIN_KEYSTORE_PASSWORD repository secrets before building."
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/jellyfin-private-debug.p12"
+          echo "JELLYFIN_PRIVATE_KEYSTORE=$RUNNER_TEMP/jellyfin-private-debug.p12" >> "$GITHUB_ENV"
+          echo "JELLYFIN_PRIVATE_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "::add-mask::$KEYSTORE_PASSWORD"
       - name: Build debug APK
         run: ./gradlew assembleLibreDebug
       - name: Upload APK
