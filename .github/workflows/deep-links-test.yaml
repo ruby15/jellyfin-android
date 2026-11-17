@@ -1,0 +1,55 @@
+name: Deep Links / Test APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feature/deep-links
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version-file: .tools-versions
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Unit tests
+        run: ./gradlew test
+      - name: Restore persistent signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.JELLYFIN_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.JELLYFIN_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$KEYSTORE_BASE64" || -z "$KEYSTORE_PASSWORD" ]]; then
+            echo "::error::Configure JELLYFIN_KEYSTORE_BASE64 and JELLYFIN_KEYSTORE_PASSWORD repository secrets before building."
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/jellyfin-private-debug.p12"
+          echo "JELLYFIN_PRIVATE_KEYSTORE=$RUNNER_TEMP/jellyfin-private-debug.p12" >> "$GITHUB_ENV"
+          echo "JELLYFIN_PRIVATE_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "::add-mask::$KEYSTORE_PASSWORD"
+      - name: Build debug APK
+        run: ./gradlew assembleLibreDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: jellyfin-deep-links-debug-apk
+          path: app/build/outputs/apk/libre/debug/*.apk
+          retention-days: 14
+          if-no-files-found: error
+      - name: Publish APK as a direct download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          apk=$(find app/build/outputs/apk/libre/debug -maxdepth 1 -name '*.apk' -print -quit)
+          test -n "$apk"
+          cp "$apk" jellyfin-deep-links-debug.apk
+          tag="deep-links-manual-${{ github.run_number }}-${{ github.run_attempt }}"
+          gh release create "$tag" jellyfin-deep-links-debug.apk --repo "${{ github.repository }}" --target feature/deep-links --title "Jellyfin Deep Links debug build $tag" --notes "Private-use test build with deep links and landscape playback. Debug APK; not an official Jellyfin release." --prerelease
